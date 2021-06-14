@@ -36,6 +36,8 @@ dev
 io
 kibibytes
 lru
+fifo
+lfu
 metadata
 namespace
 namespaces

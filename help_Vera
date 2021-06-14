@@ -1,0 +1,13 @@
+ex:
+
+[ocf_eviction_lru] = {
+		.init_cline = evp_lru_init_cline, - ocf_eviction_init_cache_line
+		.rm_cline = evp_lru_rm_cline, - ocf_eviction_purge_cache_line
+		.req_clines = evp_lru_req_clines, - ocf_eviction_need_space
+		.hot_cline = evp_lru_hot_cline, - ocf_eviction_set_hot_cache_line
+		.init_evp = evp_lru_init_evp, - ocf_eviction_initialize
+		.dirty_cline = evp_lru_dirty_cline, - set_cache_line_dirty
+		.clean_cline = evp_lru_clean_cline, - set_cache_line_clean
+		.flush_dirty = evp_lru_clean, - ocf_eviction_flush_dirty
+		.name = "lru",
+	},

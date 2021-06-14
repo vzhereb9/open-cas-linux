@@ -61,7 +61,7 @@ class casadm:
 
     @classmethod
     def start_cache(cls, device, cache_id=None, cache_mode=None,
-                    cache_line_size=None, load=False, force=False):
+                    cache_line_size=None, eviction_policy=None, load=False, force=False):
         cmd = [cls.casadm_path,
                '--start-cache',
                '--cache-device', device]
@@ -71,6 +71,8 @@ class casadm:
             cmd += ['--cache-mode', cache_mode]
         if cache_line_size:
             cmd += ['--cache-line-size', str(cache_line_size)]
+        if eviction_policy:
+            cmd += ['--cache-eviction-policy-type', str(eviction_policy)]
         if load:
             cmd += ['--load']
         if force:
@@ -137,11 +139,19 @@ class casadm:
         return cls.run_cmd(cmd)
 
     @classmethod
-    def flush_parameters(cls, cache_id, policy_type):
+    def flush_parameters(cls, cache_id, cleaning_policy_type):
         cmd = [cls.casadm_path,
                '--flush-parameters',
                '--cache-id', str(cache_id),
-               '--cleaning-policy-type', policy_type]
+               '--cleaning-policy-type', cleaning_policy_type]
+        return cls.run_cmd(cmd)
+
+    @classmethod
+    def evict_parameters(cls, cache_id, eviction_policy_type):
+        cmd = [cls.casadm_path,
+               '--flush-parameters',
+               '--cache-id', str(cache_id),
+               '--eviction-policy-type', eviction_policy_type]
         return cls.run_cmd(cmd)
 
     @classmethod
@@ -174,12 +184,12 @@ class cas_config(object):
 
     @staticmethod
     def get_by_id_path(path):
-        path = os.path.abspath(path)
+        for id_path in os.listdir('/dev/disk/by-id'):
+            full_path = '/dev/disk/by-id/{0}'.format(id_path)
+            if os.path.realpath(full_path) == os.path.realpath(path):
+                return full_path
 
-        if os.path.exists(path) or cas_config._is_exp_obj_path(path):
-            return path
-        else:
-            raise ValueError(f"Given path {path} isn't correct by-id path.")
+        raise ValueError(f"Given path {path} isn't correct by-id path.")
 
     @staticmethod
     def _is_exp_obj_path(path):
@@ -249,6 +259,8 @@ class cas_config(object):
                     raise ValueError('Invalid path to io_class file')
             elif param_name == 'cleaning_policy':
                 self.check_cleaning_policy_valid(param_value)
+            elif param_name == 'eviction_policy':
+                self.check_eviction_policy_valid(param_value)
             elif param_name == 'promotion_policy':
                 self.check_promotion_policy_valid(param_value)
             elif param_name == 'cache_line_size':
@@ -284,6 +296,10 @@ class cas_config(object):
         def check_cleaning_policy_valid(self, cleaning_policy):
             if cleaning_policy.lower() not in ['acp', 'alru', 'nop']:
                 raise ValueError(f'{cleaning_policy} is invalid cleaning policy name')
+
+        def check_eviction_policy_valid(self, eviction_policy):
+            if eviction_policy.lower() not in ['lru', 'lru_no_balance', 'fifo', 'fifo_no_balance', 'lfu', 'lfu_no_balance']:
+                raise ValueError(f'{eviction_policy} is invalid eviction policy name')
 
         def check_lazy_startup_valid(self, lazy_startup):
             if lazy_startup.lower() not in ["true", "false"]:
@@ -462,23 +478,23 @@ class cas_config(object):
             if (os.path.realpath(self.caches[new_cache_config.cache_id].device)
                     != os.path.realpath(new_cache_config.device)):
                 raise cas_config.ConflictingConfigException(
-                        'Other cache device configured under this id')
+                    'Other cache device configured under this id')
             else:
                 raise cas_config.AlreadyConfiguredException(
-                                'Cache already configured')
+                    'Cache already configured')
 
         for cache_id, cache in self.caches.items():
             if cache_id != new_cache_config.cache_id:
                 if (os.path.realpath(new_cache_config.device)
                         == os.path.realpath(cache.device)):
                     raise cas_config.ConflictingConfigException(
-                            'This cache device is already configured as a cache')
+                        'This cache device is already configured as a cache')
 
             for _, core in cache.cores.items():
                 if (os.path.realpath(core.device)
                         == os.path.realpath(new_cache_config.device)):
                     raise cas_config.ConflictingConfigException(
-                            'This cache device is already configured as a core')
+                        'This cache device is already configured as a core')
 
         try:
             new_cache_config.device = cas_config.get_by_id_path(new_cache_config.device)
@@ -496,7 +512,7 @@ class cas_config(object):
                 if (os.path.realpath(cache.device)
                         == os.path.realpath(new_core_config.device)):
                     raise cas_config.ConflictingConfigException(
-                            'Core device already configured as a cache')
+                        'Core device already configured as a cache')
 
                 for core_id, core in cache.cores.items():
                     if (cache_id == new_core_config.cache_id
@@ -504,15 +520,15 @@ class cas_config(object):
                         if (os.path.realpath(core.device)
                                 == os.path.realpath(new_core_config.device)):
                             raise cas_config.AlreadyConfiguredException(
-                                    'Core already configured')
+                                'Core already configured')
                         else:
                             raise cas_config.ConflictingConfigException(
-                                    'Other core device configured under this id')
+                                'Other core device configured under this id')
                     else:
                         if (os.path.realpath(core.device)
                                 == os.path.realpath(new_core_config.device)):
                             raise cas_config.ConflictingConfigException(
-                                    'This core device is already configured as a core')
+                                'This core device is already configured as a core')
         except KeyError:
             pass
 
@@ -551,18 +567,22 @@ class cas_config(object):
 
 def start_cache(cache, load, force=False):
     casadm.start_cache(
-            device=cache.device,
-            cache_id=cache.cache_id,
-            cache_mode=cache.cache_mode,
-            cache_line_size=cache.params.get('cache_line_size'),
-            load=load,
-            force=force)
+        device=cache.device,
+        cache_id=cache.cache_id,
+        cache_mode=cache.cache_mode,
+        cache_line_size=cache.params.get('cache_line_size'),
+        load=load,
+        force=force)
 
 
 def configure_cache(cache):
     if "cleaning_policy" in cache.params:
         casadm.set_param(
             "cleaning", cache_id=cache.cache_id, policy=cache.params["cleaning_policy"]
+        )
+    if "eviction_policy" in cache.params:
+        casadm.set_param(
+            "eviction", cache_id=cache.cache_id, policy=cache.params["eviction_policy"]
         )
     if "promotion_policy" in cache.params:
         casadm.set_param(
@@ -576,10 +596,10 @@ def configure_cache(cache):
 
 def add_core(core, attach):
     casadm.add_core(
-            device=core.device,
-            cache_id=core.cache_id,
-            core_id=core.core_id,
-            try_add=attach)
+        device=core.device,
+        cache_id=core.cache_id,
+        core_id=core.core_id,
+        try_add=attach)
 
 # Another helper functions
 
@@ -803,8 +823,8 @@ def _get_uninitialized_devices(target_dev_state):
     for core in target_dev_state.cores:
         try:
             runtime_state = (
-                runtime_dev_state["cores"].get((core.cache_id, core.core_id))
-                or runtime_dev_state["core_pool"].get(os.path.realpath(core.device))
+                    runtime_dev_state["cores"].get((core.cache_id, core.core_id))
+                    or runtime_dev_state["core_pool"].get(os.path.realpath(core.device))
             )
         except ValueError:
             runtime_state = None

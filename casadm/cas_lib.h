@@ -30,49 +30,49 @@
 				     stands for success */
 
 struct core_device {
-	int id;
-	int cache_id;
-	char path[MAX_STR_LEN];
-	struct kcas_core_info info;
+    int id;
+    int cache_id;
+    char path[MAX_STR_LEN];
+    struct kcas_core_info info;
 };
 
 struct cache_device {
-	int id;
-	int state;
-	int expected_core_count;
-	char device[MAX_STR_LEN];
-	int mode;
-	int eviction_policy;
-	int cleaning_policy;
-	int promotion_policy;
-	int dirty;
-	int flushed;
-	unsigned size;
-	int core_count;
-	struct core_device cores[];
+    int id;
+    int state;
+    int expected_core_count;
+    char device[MAX_STR_LEN];
+    int mode;
+    int eviction_policy;
+    int cleaning_policy;
+    int promotion_policy;
+    int dirty;
+    int flushed;
+    unsigned size;
+    int core_count;
+    struct core_device cores[];
 };
 
 struct cas_param {
-	char *name;
-	char *unit;
-	char **value_names;
-	uint32_t (*transform_value)(uint32_t value);
-	uint32_t value;
-	bool select;
+    char *name;
+    char *unit;
+    char **value_names;
+    uint32_t (*transform_value)(uint32_t value);
+    uint32_t value;
+    bool select;
 };
 
 enum output_format_t {
-	OUTPUT_FORMAT_INVALID = 0,
-	OUTPUT_FORMAT_TABLE = 1,
-	OUTPUT_FORMAT_CSV = 2,
-	OUTPUT_FORMAT_DEFAULT = OUTPUT_FORMAT_TABLE
+    OUTPUT_FORMAT_INVALID = 0,
+    OUTPUT_FORMAT_TABLE = 1,
+    OUTPUT_FORMAT_CSV = 2,
+    OUTPUT_FORMAT_DEFAULT = OUTPUT_FORMAT_TABLE
 };
 
 enum metadata_mode_t {
-	METADATA_MODE_INVALID = 0,
-	METADATA_MODE_NORMAL,
-	METADATA_MODE_ATOMIC,
-	METADATA_MODE_DEFAULT = METADATA_MODE_NORMAL,
+    METADATA_MODE_INVALID = 0,
+    METADATA_MODE_NORMAL,
+    METADATA_MODE_ATOMIC,
+    METADATA_MODE_DEFAULT = METADATA_MODE_NORMAL,
 };
 
 #define STATS_FILTER_INVALID 0
@@ -121,10 +121,12 @@ int caslog(int log_level, const char *template, ...);
 void metadata_memory_footprint(uint64_t size, float *footprint, const char **units);
 
 int start_cache(uint16_t cache_id, unsigned int cache_init,
-		const char *cache_device, ocf_cache_mode_t cache_mode,
-		ocf_eviction_t eviction_policy_type,
-		ocf_cache_line_size_t line_size, int force);
+                const char *cache_device, ocf_cache_mode_t cache_mode,
+                ocf_eviction_t eviction_policy_type,
+                ocf_cache_line_size_t line_size, int force);
 int stop_cache(uint16_t cache_id, int flush);
+
+#define CAS_CLI_HELP_START_EVICTION_TYPES "lru|lru_no_balance|fifo|fifo_no_balance|lfu|lfu_no_balance"
 
 #ifdef WI_AVAILABLE
 #define CAS_CLI_HELP_START_CACHE_MODES "wt|wb|wa|pt|wi|wo"
@@ -156,7 +158,7 @@ int cache_params_set(unsigned int cache_id, struct cas_param *params);
  * nonzero exit code means failure
  */
 int cache_get_param(unsigned int cache_id, unsigned int param_id,
-		struct cas_param *param);
+                    struct cas_param *param);
 /**
  * @brief handle get cache param command
  * @param cache_id id of cache device
@@ -165,7 +167,7 @@ int cache_get_param(unsigned int cache_id, unsigned int param_id,
  * nonzero exit code means failure
  */
 int cache_params_get(unsigned int cache_id, struct cas_param *params,
-		unsigned int output_format);
+                     unsigned int output_format);
 
 /**
  * @brief handle set core param command
@@ -176,7 +178,7 @@ int cache_params_get(unsigned int cache_id, struct cas_param *params,
  * nonzero exit code means failure
  */
 int core_params_set(unsigned int cache_id, unsigned int core_id,
-		struct cas_param *params);
+                    struct cas_param *params);
 
 /**
  * @brief handle get core param command
@@ -187,7 +189,7 @@ int core_params_set(unsigned int cache_id, unsigned int core_id,
  * nonzero exit code means failure
  */
 int core_params_get(unsigned int cache_id, unsigned int core_id,
-		struct cas_param *params, unsigned int output_format);
+                    struct cas_param *params, unsigned int output_format);
 
 /**
  * @brief handle set cache mode (-Q) command
@@ -213,7 +215,7 @@ int add_core(unsigned int cache_id, unsigned int core_id, const char *core_devic
 int get_core_info(int fd, int cache_id, int core_id, struct kcas_core_info *info, bool by_id_path);
 
 int remove_core(unsigned int cache_id, unsigned int core_id,
-		bool detach, bool force_no_flush);
+                bool detach, bool force_no_flush);
 
 /**
  * @brief remove inactive core device from a cache
@@ -246,7 +248,7 @@ int cas_module_version(char *buff, int size);
 int disk_module_version(char *buff, int size);
 int list_caches(unsigned int list_format, bool by_id_path);
 int cache_status(unsigned int cache_id, unsigned int core_id, int io_class_id,
-		 unsigned int stats_filters, unsigned int stats_format, bool by_id_path);
+                 unsigned int stats_filters, unsigned int stats_format, bool by_id_path);
 int get_inactive_core_count(const struct kcas_cache_info *cache_info);
 
 int open_ctrl_device_quiet();
@@ -260,7 +262,7 @@ int validate_dev(const char *dev_path);
 int validate_str_num(const char *source_str, const char *msg, long long int min, long long int max);
 int validate_str_num_sbd(const char *source_str, const char *msg, int min, int max);
 int validate_str_unum(const char *source_str, const char *msg, unsigned int min,
-		unsigned int max);
+                      unsigned int max);
 int validate_path(const char *path, int exist);
 
 int validate_str_cache_mode(const char *s);
